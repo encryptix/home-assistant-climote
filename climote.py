@@ -34,7 +34,6 @@ ICON = "mdi:thermometer"
 MAX_TEMP = 35
 MIN_TEMP = 5
 
-#SUPPORT_FLAGS = (SUPPORT_ON_OFF | SUPPORT_TARGET_TEMPERATURE)
 SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE
 SUPPORT_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF]
 
@@ -97,9 +96,7 @@ class Climote(ClimateEntity):
 
     @property
     def hvac_mode(self):
-#        """Return current operation ie. heat, cool, idle."""
-#        return 'idle'
-        """Return current operation. ie. heat, idle."""
+        """Return current operation. ie. heat, cool, off."""
         zone = "zone" + str(self._zoneid)
         return 'heat' if self._climote.data[zone]["status"] == '5' else 'off'
 
@@ -186,14 +183,6 @@ class Climote(ClimateEntity):
             self._force_update = True
         return res
 
-    async def async_update(self):
-        """Get the latest state from the thermostat."""
-        #if self._force_update:
-        #    asyncio.run_coroutine_threadsafe(throttled_update(hass,self,no_throttle=True) , hass.loop)
-        #    self._force_update = False
-        #else:
-         #   asyncio.run_coroutine_threadsafe(throttled_update(hass,target,no_throttle=False) , hass.loop)
-
     async def _throttled_update(self, **kwargs):
         """Get the latest state from the thermostat with a throttle."""
         _LOGGER.info("_throttled_update Force: %s", self._force_update)
@@ -245,8 +234,6 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
-            # if not self.__updateStatus(False):
-            #    self.__updateStatus(True)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
@@ -254,7 +241,6 @@ class ClimoteService:
     def __login(self):
         r = self.s.post(_LOGIN_URL, data=self.creds)
         if(r.status_code == requests.codes.ok):
-            # Parse the content
             soup = BeautifulSoup(r.content, "lxml")
             input = soup.find("input")  # First input has token "cs_token_rf"
             if (len(input['value']) < 2):
