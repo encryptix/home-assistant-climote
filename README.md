@@ -2,6 +2,9 @@
 On hassio host navigate to custom_component folder
 
 ```
+git clone https://github.com/brianbola90/home-assistant-climote.git
+```
+Add the confgureation below and restart your instance
 
 
 # home-assistant-climote
