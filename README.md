@@ -1,3 +1,9 @@
+# INSTALL
+On hassio host navigate to custom_component folder
+
+```
+
+
 # home-assistant-climote
 Climote Climate Platform for home-assistant
 
