@@ -23,8 +23,4 @@ climate:
 
 To be done:
 
- - ~~Proper actions~~ Set temperature and Boost heating (1h by default)
- - Config entries
--   ~~Refresh interval~~ see config
--   Move i/o outside of event loop
--   HACS integration / install instructions
+- Fix bug with Tempurature setting
