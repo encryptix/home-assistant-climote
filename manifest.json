@@ -1,0 +1,10 @@
+{
+  "domain": "climote",
+  "version": "1.0.0",
+  "name": "Climote | Smart Heating Controls",
+  "documentation": "https://www.example.com",
+  "dependencies": [],
+  "codeowners": ["@VatzU","@demonday","@brianbola90"],
+  "requirements": ["polling","xmljson"],
+  "config_flow": false
+}
