@@ -247,7 +247,7 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
-            self.getStatus(force=False)
+            self.getStatus(force=True)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
@@ -303,6 +303,7 @@ class ClimoteService:
             self.__login()
             _LOGGER.info("Beginning Get Status")
             self.__getStatus(force=True)
+            _LOGGER.info(self.data)
             _LOGGER.info("Ended Get Status")
         finally:
             self.__logout()
@@ -311,8 +312,7 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Update Status")
-            self.__getStatus(force=True)
-            _LOGGER.info(self.data)
+            self.__updateStatus(force=True)
             _LOGGER.info("Ended Update Status")
         finally:
             self.__logout()
