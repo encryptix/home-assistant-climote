@@ -187,11 +187,7 @@ class Climote(ClimateEntity):
         if(res):
             self._force_update = True
         return res
-    
-    def update(self, **kwargs):
-        """Get the latest state from the thermostat with a throttle."""
-        _LOGGER.info("_throttled_update Force: %s", self._force_update)
-        self._climote.__login()
+   
 
 
     async def _throttled_update(self, **kwargs):
