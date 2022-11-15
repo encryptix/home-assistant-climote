@@ -22,8 +22,8 @@ from homeassistant.const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=60)
-
+MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
+SCAN_INTERVAL = MIN_TIME_BETWEEN_UPDATES
 #: Interval in hours that module will try to refresh data from the climote.
 CONF_REFRESH_INTERVAL = 'refresh_interval'
 
@@ -63,6 +63,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
 
     interval = int(config.get(CONF_REFRESH_INTERVAL))
+    
 
     # Add devices
     climote = ClimoteService(username, password, climoteid)
@@ -89,6 +90,10 @@ class Climote(ClimateEntity):
         self._force_update = False
         self.throttled_update = Throttle(timedelta(hours=interval))(self._throttled_update)
 
+    @property
+    def should_poll(self):
+        return True
+    
     @property
     def supported_features(self):
         """Return the list of supported features."""
@@ -182,6 +187,12 @@ class Climote(ClimateEntity):
         if(res):
             self._force_update = True
         return res
+    
+    def update(self, **kwargs):
+        """Get the latest state from the thermostat with a throttle."""
+        _LOGGER.info("_throttled_update Force: %s", self._force_update)
+        self._climote.__login()
+
 
     async def _throttled_update(self, **kwargs):
         """Get the latest state from the thermostat with a throttle."""
