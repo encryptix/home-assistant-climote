@@ -254,9 +254,6 @@ class ClimoteService:
                 return False
             self.logged_in = True
             self.token = input['value']
-            _LOGGER.info("Beginning Update Status")
-            self.__updateStatus(force=True)
-            _LOGGER.info("Ended Update Status")
             str = r.text
             sched = str.find(_SCHEDULE_ELEMENT)
             if (sched):
@@ -283,7 +280,9 @@ class ClimoteService:
     def updateStatus(self, force):
         try:
             self.__login()
-            self.__updateStatus(force)
+            _LOGGER.info("Beginning Update Status")
+            self.__updateStatus(force=True)
+            _LOGGER.info("Ended Update Status")
         finally:
             self.__logout()
 
