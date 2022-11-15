@@ -283,13 +283,11 @@ class ClimoteService:
     
     def set_hvac_mode_on(self, zoneid):
         zone = "zone" + str(zoneid)
-        data = self.data[zone]["status"] = '5'
-        return data
+        self.data[zone]["status"] = '5'
     
     def set_hvac_mode_off(self, zoneid):
         zone = "zone" + str(zoneid)
-        data = self.data[zone]["status"] = 'null'
-        return data
+        self.data[zone]["status"] = 'null'
 
     def updateStatus(self, force):
         try:
