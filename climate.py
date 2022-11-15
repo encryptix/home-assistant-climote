@@ -247,9 +247,9 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
+            self.getStatus(force=False)
             return True if(self.config is not None) else False
         finally:
-            self.getStatus(force=True)
             self.__logout()
 
     def __login(self):
@@ -335,7 +335,7 @@ class ClimoteService:
             res = False
         finally:
             self.s.headers = tmp
-        return self.data
+        return r.text
         
         
 
