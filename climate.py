@@ -273,20 +273,22 @@ class ClimoteService:
 
     def boost(self, zoneid, time):
         _LOGGER.info('Boosting Zone %s', zoneid)
+        self.set_hvac_mode_on(zoneid)
         return self.__boost(zoneid, time)
     
     def off(self, zoneid, time):
         _LOGGER.info('Turning Off Zone %s', zoneid)
+        self.set_hvac_mode_off(zoneid)
         return self.__boost(zoneid, time)
     
     def set_hvac_mode_on(self, zoneid):
         zone = "zone" + str(zoneid)
-        data = self.data[zone]["status"] == '5'
+        data = self.data[zone]["status"] = '5'
         return data
     
     def set_hvac_mode_off(self, zoneid):
         zone = "zone" + str(zoneid)
-        data = self.data[zone]["status"] == 'null'
+        data = self.data[zone]["status"] = 'null'
         return data
 
     def updateStatus(self, force):
