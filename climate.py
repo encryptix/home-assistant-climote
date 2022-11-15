@@ -219,6 +219,7 @@ _SCHEDULE_ELEMENT = '/manager/edit-heating-schedule?heatingScheduleId'
 
 _STATUS_URL = 'https://climote.climote.ie/manager/get-status'
 _STATUS_FORCE_URL = _STATUS_URL + '?force=1'
+_GET_STATUS_FORCE_URL = _STATUS_URL + '?force=0'
 _STATUS_RESPONSE_URL = ('https://climote.climote.ie/manager/'
                         'waiting-get-status-response')
 _BOOST_URL = 'https://climote.climote.ie/manager/boost'
@@ -245,6 +246,7 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
+            self.getStatus(force=True)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
@@ -295,6 +297,14 @@ class ClimoteService:
         zone = "zone" + str(zoneid)
         self.data[zone]["thermostat"] = temp
 
+    def getStatus(self, force):
+        try:
+            self.__login()
+            _LOGGER.info("Beginning Update Status")
+            self.__getStatus(force=True)
+            _LOGGER.info("Ended Update Status")
+        finally:
+            self.__logout()
 
     def updateStatus(self, force):
         try:
@@ -304,6 +314,28 @@ class ClimoteService:
             _LOGGER.info("Ended Update Status")
         finally:
             self.__logout()
+
+    def __getStatus(self, force):
+        res = None
+        tmp = self.s.headers
+        try:
+            # Make the initial request (force the update)
+            if(force):
+                r = self.s.get(_GET_STATUS_FORCE_URL, data=self.creds)
+            else:
+                r = self.s.get(_STATUS_URL, data=self.creds)
+            if(r.text == '0'):
+                res = False
+            else:
+                self.data = json.loads(r.text)
+                res = True
+        except requests.exceptions.ConnectTimeout:
+            res = False
+        finally:
+            self.s.headers = tmp
+        return res
+        
+        
 
 
     def __updateStatus(self, force):
