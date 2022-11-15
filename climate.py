@@ -180,7 +180,7 @@ class Climote(ClimateEntity):
             if(res):
                 self._force_update = True
                 zone = "zone" + str(self._zoneid)
-                self._climote.data[zone]['status'] == '0'
+                self._climote.data[zone]['status'] == 'null'
             return res
 
     def set_temperature(self, **kwargs):
