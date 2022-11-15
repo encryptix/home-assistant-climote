@@ -302,8 +302,7 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Get Status")
-            status = self.__getStatus(force=True)
-            _LOGGER.info(status)
+            self.__getStatus(force=True)
             _LOGGER.info("Ended Get Status")
         finally:
             self.__logout()
@@ -312,6 +311,7 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Update Status")
+            _LOGGER.info(self.__updateStatus(force=True))
             self.__updateStatus(force=True)
             _LOGGER.info("Ended Update Status")
         finally:
@@ -335,7 +335,7 @@ class ClimoteService:
             res = False
         finally:
             self.s.headers = tmp
-        return r.text
+        return self.data
         
         
 
