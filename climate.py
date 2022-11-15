@@ -103,13 +103,8 @@ class Climote(ClimateEntity):
     def hvac_mode(self):
         """Return current operation. ie. heat, cool, off."""
         zone = "zone" + str(self._zoneid)
-        print(self._climote.data)
-        zone_data = self._climote.data.get(zone, None)
-        status = zone_data.get('status', None)
-        if status == '5':
-            return 'heat'
-        else:
-            return 'off'
+        _LOGGER.debug(self._climote.data)
+        return 'heat' if self._climote.data[zone]["status"] == '5' else 'off'
 
     @property
     def hvac_modes(self):
@@ -252,7 +247,6 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
-            self.getStatus(force=False)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
@@ -307,7 +301,7 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Get Status")
-            self.__getStatus(force=False)
+            self.__getStatus(force=True)
             _LOGGER.info("Ended Get Status")
         finally:
             self.__logout()
