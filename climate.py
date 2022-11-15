@@ -90,10 +90,6 @@ class Climote(ClimateEntity):
         self.throttled_update = Throttle(timedelta(hours=interval))(self._throttled_update)
 
     @property
-    def should_poll(self):
-        return True
-    
-    @property
     def supported_features(self):
         """Return the list of supported features."""
         return SUPPORT_FLAGS
@@ -186,11 +182,6 @@ class Climote(ClimateEntity):
         if(res):
             self._force_update = True
         return res
-    
-    def update(self, **kwargs):
-        """Get the latest state from the thermostat with a throttle."""
-        _LOGGER.info("_throttled_update Force: %s", self._force_update)
-        self._climote.updateStatus(self._force_update)
 
     async def _throttled_update(self, **kwargs):
         """Get the latest state from the thermostat with a throttle."""
