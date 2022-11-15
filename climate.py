@@ -330,6 +330,7 @@ class ClimoteService:
                 res = False
             else:
                 self.data = json.loads(r.text)
+                _LOGGER.info(r.text)
                 res = True
         except requests.exceptions.ConnectTimeout:
             res = False
