@@ -303,7 +303,7 @@ class ClimoteService:
             self.__login()
             _LOGGER.info("Beginning Get Status")
             status = self.__getStatus(force=True)
-            _LOGGER.debug(status)
+            _LOGGER.info(status)
             _LOGGER.info("Ended Get Status")
         finally:
             self.__logout()
