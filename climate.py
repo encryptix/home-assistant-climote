@@ -311,8 +311,8 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Update Status")
-            status = self.__getStatus(force=True)
-            _LOGGER.info(status)
+            self.__getStatus(force=True)
+            _LOGGER.info(self.data)
             _LOGGER.info("Ended Update Status")
         finally:
             self.__logout()
@@ -335,7 +335,7 @@ class ClimoteService:
             res = False
         finally:
             self.s.headers = tmp
-        return self.data
+        return res
         
         
 
