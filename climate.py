@@ -291,7 +291,7 @@ class ClimoteService:
     
     def set_temp_data(self, zoneid, temp):
         zone = "zone" + str(zoneid)
-        self.data[zone]["temperature"] = temp
+        self.data[zone]["thermostat"] = temp
 
 
     def updateStatus(self, force):
