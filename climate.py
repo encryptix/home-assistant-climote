@@ -241,7 +241,7 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
-            self.updateStatus(force=True)
+            self.updateStatus(force=tr)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
@@ -307,7 +307,7 @@ class ClimoteService:
                 step=10,
                 check_success=is_done,
                 poll_forever=False,
-                timeout=60
+                timeout=120
             )
             if(r.text == '0'):
                 res = False
