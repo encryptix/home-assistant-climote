@@ -188,6 +188,9 @@ class Climote(ClimateEntity):
         if(res):
             self._force_update = True
         return res
+        
+    def update(self):
+        self._climote.updateStatus(self._force_update)
    
 
 
@@ -242,7 +245,6 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
-            self.updateStatus(force=False)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
