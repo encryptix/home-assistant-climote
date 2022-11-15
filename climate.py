@@ -301,9 +301,9 @@ class ClimoteService:
     def getStatus(self, force):
         try:
             self.__login()
-            _LOGGER.info("Beginning Update Status")
+            _LOGGER.info("Beginning Get Status")
             self.__getStatus(force=True)
-            _LOGGER.info("Ended Update Status")
+            _LOGGER.info("Ended Get Status")
         finally:
             self.__logout()
 
@@ -329,6 +329,7 @@ class ClimoteService:
                 res = False
             else:
                 self.data = json.loads(r.text)
+                _LOGGER.debug(r.text)
                 res = True
         except requests.exceptions.ConnectTimeout:
             res = False
