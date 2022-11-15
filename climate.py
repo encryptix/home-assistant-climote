@@ -249,6 +249,7 @@ class ClimoteService:
             self.__setZones()
             return True if(self.config is not None) else False
         finally:
+            self.getStatus(force=True)
             self.__logout()
 
     def __login(self):
