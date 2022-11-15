@@ -325,7 +325,6 @@ class ClimoteService:
             # Make the initial request (force the update)
             if(force):
                 r = self.s.get(_GET_STATUS_FORCE_URL, data=self.creds)
-                _LOGGER.debug(r.text)
             else:
                 r = self.s.get(_STATUS_URL, data=self.creds)
             if(r.text == '0'):
