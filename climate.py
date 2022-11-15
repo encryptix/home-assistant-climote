@@ -22,7 +22,7 @@ from homeassistant.const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
+MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=5)
 SCAN_INTERVAL = MIN_TIME_BETWEEN_UPDATES
 #: Interval in hours that module will try to refresh data from the climote.
 CONF_REFRESH_INTERVAL = 'refresh_interval'
