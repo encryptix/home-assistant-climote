@@ -335,7 +335,7 @@ class ClimoteService:
             res = False
         finally:
             self.s.headers = tmp
-        return res
+        return self.data
         
         
 
