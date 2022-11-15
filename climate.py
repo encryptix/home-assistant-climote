@@ -103,10 +103,11 @@ class Climote(ClimateEntity):
     def hvac_mode(self):
         """Return current operation. ie. heat, cool, off."""
         zone = "zone" + str(self._zoneid)
-        data = self._climote.data
-        if 'status' in data[zone]:
-            return 'heat' if data[zone]["status"] == '5' else 'off'
-        else: 
+        zone_data = self._climote.data[zone]
+        status = zone_data.get('status', None)
+        if status == '5':
+            return 'heat'
+        else:
             return 'off'
 
     @property
@@ -332,7 +333,6 @@ class ClimoteService:
                 res = False
             else:
                 self.data = json.loads(r.text)
-                _LOGGER.info(r.text)
                 res = True
         except requests.exceptions.ConnectTimeout:
             res = False
