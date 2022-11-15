@@ -171,16 +171,15 @@ class Climote(ClimateEntity):
             res = self._climote.boost(self._zoneid, 1)
             if(res):
                 self._force_update = True
-                zone = "zone" + str(self._zoneid)
-                self._climote.data[zone]['status'] == '5'
+                self._climote.set_hvac_mode_on(self._zoneid)
+
             return res
         if(hvac_mode==HVAC_MODE_OFF):
             """Turn Heating Boost Off."""
             res = self._climote.off(self._zoneid, 0)
             if(res):
                 self._force_update = True
-                zone = "zone" + str(self._zoneid)
-                self._climote.data[zone]['status'] == 'null'
+                self._climote.set_hvac_mode_off(self._zoneid)
             return res
 
     def set_temperature(self, **kwargs):
@@ -282,6 +281,16 @@ class ClimoteService:
     def off(self, zoneid, time):
         _LOGGER.info('Turning Off Zone %s', zoneid)
         return self.__boost(zoneid, time)
+    
+    def set_hvac_mode_on(self, zoneid):
+        zone = "zone" + str(zoneid)
+        data = self.data[zone]["status"] == '5'
+        return data
+    
+    def set_hvac_mode_off(self, zoneid):
+        zone = "zone" + str(zoneid)
+        data = self.data[zone]["status"] == 'null'
+        return data
 
     def updateStatus(self, force):
         try:
@@ -291,6 +300,7 @@ class ClimoteService:
             _LOGGER.info("Ended Update Status")
         finally:
             self.__logout()
+
 
     def __updateStatus(self, force):
         def is_done(r):
