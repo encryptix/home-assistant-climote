@@ -307,7 +307,7 @@ class ClimoteService:
                 step=10,
                 check_success=is_done,
                 poll_forever=False,
-                timeout=10
+                timeout=60
             )
             if(r.text == '0'):
                 res = False
