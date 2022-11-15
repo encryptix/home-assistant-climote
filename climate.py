@@ -311,7 +311,7 @@ class ClimoteService:
         try:
             self.__login()
             _LOGGER.info("Beginning Update Status")
-            status = self.__updateStatus(force=True)
+            status = self.__getStatus(force=True)
             _LOGGER.info(status)
             _LOGGER.info("Ended Update Status")
         finally:
