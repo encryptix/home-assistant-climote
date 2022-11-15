@@ -88,7 +88,7 @@ class Climote(ClimateEntity):
         self._zoneid = zoneid
         self._name = name
         self._force_update = False
-        self.throttled_update = Throttle(timedelta(hours=interval))(self._throttled_update)
+        self.throttled_update = Throttle(timedelta(minutes=interval))(self._throttled_update)
 
     @property
     def should_poll(self):
@@ -173,7 +173,7 @@ class Climote(ClimateEntity):
             return res
         if(hvac_mode==HVAC_MODE_OFF):
             """Turn Heating Boost Off."""
-            res = self._climote.boost(self._zoneid, 0)
+            res = self._climote.off(self._zoneid, 0)
             if(res):
                 self._force_update = True
             return res
@@ -273,6 +273,10 @@ class ClimoteService:
 
     def boost(self, zoneid, time):
         _LOGGER.info('Boosting Zone %s', zoneid)
+        return self.__boost(zoneid, time)
+    
+    def off(self, zoneid, time):
+        _LOGGER.info('Turning Off Zone %s', zoneid)
         return self.__boost(zoneid, time)
 
     def updateStatus(self, force):
