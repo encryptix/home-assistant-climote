@@ -169,13 +169,16 @@ class Climote(ClimateEntity):
         if(hvac_mode==HVAC_MODE_HEAT):
             """Turn Heating Boost On."""
             res = self._climote.boost(self._zoneid, 1)
-            self._force_update = True
+            if(res):
+                self._force_update = True
+                self._climote.updateStatus(force=False)
             return res
         if(hvac_mode==HVAC_MODE_OFF):
             """Turn Heating Boost Off."""
             res = self._climote.off(self._zoneid, 0)
             if(res):
                 self._force_update = True
+                self._climote.updateStatus(force=False)
             return res
 
     def set_temperature(self, **kwargs):
