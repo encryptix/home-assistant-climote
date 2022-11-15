@@ -247,6 +247,7 @@ class ClimoteService:
             self.__login()
             self.__setConfig()
             self.__setZones()
+            self.updateStatus(force=False)
             return True if(self.config is not None) else False
         finally:
             self.__logout()
