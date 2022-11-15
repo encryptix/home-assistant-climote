@@ -288,6 +288,11 @@ class ClimoteService:
     def set_hvac_mode_off(self, zoneid):
         zone = "zone" + str(zoneid)
         self.data[zone]["status"] = 'null'
+    
+    def set_temp_data(self, zoneid, temp):
+        zone = "zone" + str(zoneid)
+        self.data[zone]["temperature"] = temp
+
 
     def updateStatus(self, force):
         try:
@@ -368,6 +373,8 @@ class ClimoteService:
             r = self.s.post(_SET_TEMP_URL, data=data)
             _LOGGER.info('set_temperature: %d', r.status_code)
             res = r.status_code == requests.codes.ok
+            self.set_temp_data(zone, temp=temp)
+
         finally:
             self.__logout()
         return res
