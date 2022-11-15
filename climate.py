@@ -254,8 +254,9 @@ class ClimoteService:
                 return False
             self.logged_in = True
             self.token = input['value']
-            _LOGGER.info("Token: %s", self.token)
+            _LOGGER.info("Beginning Update Status")
             self.__updateStatus(force=True)
+            _LOGGER.info("Ended Update Status")
             str = r.text
             sched = str.find(_SCHEDULE_ELEMENT)
             if (sched):
