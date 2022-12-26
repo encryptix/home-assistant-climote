@@ -7,6 +7,7 @@
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
+      "invalid_boost": "Invalid default boost value",
       "unknown": "Unexpected error"
     },
     "step": {
@@ -16,7 +17,8 @@
           "password": "Password",
           "username": "Username",
           "interval": "Data Refresh Interval",
-          "boost": "Initial Boost Duration"
+          "boost": "Initial Boost Duration",
+          "test": "Enable Test Mode"
         }
       },
       "reauth_confirm": {
@@ -35,7 +37,8 @@
         "data": {
           "password": "Password",
           "username": "Username",
-          "interval": "Data Refresh Interval"
+          "interval": "Data Refresh Interval",
+          "test": "Enable Test Mode"
         }
       }
     }

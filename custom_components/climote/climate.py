@@ -119,7 +119,7 @@ class ClimoteEntity(ClimateEntity):
     def current_temperature(self):
         zone = "zone" + str(self._zoneid)
         _LOGGER.info(
-            "current_temperature: Zone: %s, Temp %s C",
+            "Current_temperature: Zone: %s, Temp %s C",
             zone,
             self._climote.data[zone]["temperature"],
         )
@@ -133,7 +133,7 @@ class ClimoteEntity(ClimateEntity):
     def target_temperature(self):
         """Return the temperature we try to reach."""
         zone = "zone" + str(self._zoneid)
-        _LOGGER.info("target_temperature: %s", self._climote.data[zone]["thermostat"])
+        _LOGGER.info("Target_temperature: %s", self._climote.data[zone]["thermostat"])
         return int(self._climote.data[zone]["thermostat"])
 
     @property

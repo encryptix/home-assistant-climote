@@ -7,7 +7,8 @@
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]",
           "interval": "[%key:common::config_flow::data::interval%]",
-          "boost": "[%key:common::config_flow::data::boost%]"
+          "boost": "[%key:common::config_flow::data::boost%]",
+          "test": "[%key:common::config_flow::data::test%]"
         }
       },
       "reauth_confirm": {
@@ -20,6 +21,7 @@
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "invalid_boost": "[%key:common::config_flow::error::invalid_boost%]",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
@@ -33,7 +35,8 @@
         "data": {
           "interval": "[%key:common::config_flow::data::interval%]",
           "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "password": "[%key:common::config_flow::data::password%]",
+          "test": "[%key:common::config_flow::data::test%]"
         }
       }
     }

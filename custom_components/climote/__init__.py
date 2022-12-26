@@ -17,12 +17,15 @@ from .const import (
     PASSWORD,
     REFRESH_INTERVAL,
     USERNAME,
+    TEST_MODE,
 )
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER]
-# Temporary testing toggle
-TEST = False
+PLATFORMS: list[Platform] = [
+    Platform.CLIMATE,
+    Platform.SELECT,
+    Platform.SENSOR,
+]
 
 # Signal Updates https://developers.home-assistant.io/docs/config_entries_options_flow_handler/#signal-updates
 async def update_listener(hass, entry):
@@ -33,11 +36,11 @@ async def update_listener(hass, entry):
     username = entry.data[USERNAME]
     password = entry.data[PASSWORD]
     refresh_interval = entry.data[REFRESH_INTERVAL]
-
-    if TEST:
-        climote = ClimoteServiceStub
-    else:
+    test_mode = entry.data[TEST_MODE]
+    if test_mode is False:
         climote = ClimoteService
+    else:
+        climote = ClimoteServiceStub
 
     climote.update_instance(climoteid, username, password, refresh_interval)
 
@@ -49,11 +52,11 @@ def get_climote_instance(entry):
     password = entry.data[PASSWORD]
     refresh_interval = entry.data[REFRESH_INTERVAL]
     default_boost_duration = entry.data[BOOST_DURATION]
-
-    if TEST:
-        climote = ClimoteServiceStub
-    else:
+    test_mode = entry.data[TEST_MODE]
+    if test_mode is False:
         climote = ClimoteService
+    else:
+        climote = ClimoteServiceStub
 
     climote_svc = climote.get_instance(
         climoteid,

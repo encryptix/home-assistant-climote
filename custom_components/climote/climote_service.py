@@ -7,6 +7,8 @@ import polling
 import requests
 import xmljson
 
+DEFAULT_BOOST_DURATION = "0.5"
+DEFAULT_REFRESH_INTERVAL = 12
 
 # This would eventually be a python package, nothing HA specific in it
 class ClimoteService:
@@ -29,6 +31,7 @@ class ClimoteService:
         instance.logged_in = False
         instance.update_in_progress = False
         instance.last_update_complete = None
+        instance.seconds_since_update = None
 
     @staticmethod
     def get_instance(
@@ -36,8 +39,8 @@ class ClimoteService:
         username,
         password,
         logger,
-        refresh_interval: 12,
-        default_boost_duration: 1,
+        refresh_interval: DEFAULT_REFRESH_INTERVAL,
+        default_boost_duration: DEFAULT_BOOST_DURATION,
     ):
         if not ClimoteService._climote_service_instances.get(passcode, None):
             ClimoteService._climote_service_instances[passcode] = ClimoteService(
@@ -61,8 +64,8 @@ class ClimoteService:
         username,
         password,
         logger,
-        refresh_interval: 12,
-        default_boost_duration: 1,
+        refresh_interval: DEFAULT_REFRESH_INTERVAL,
+        default_boost_duration: DEFAULT_BOOST_DURATION,
     ):
         self.s = requests.Session()
         self.s.headers.update(
@@ -83,6 +86,8 @@ class ClimoteService:
         self.default_boost_duration = default_boost_duration
         self.update_in_progress = False
         self.last_update_complete = None
+        self.last_update_attempt = None
+        self.seconds_since_update = None
 
     def hours_to_seconds(self, hours):
         return hours * 60 * 60
@@ -106,7 +111,7 @@ class ClimoteService:
 
     def test_authenticate(self):
         # Very hacky...
-        # TODO raise TimeoutException("Test exception") if can't connect
+        # TODO raise TimeoutException("Could not connect to climote endpoint") if can't connect
         r = self.s.post(_LOGIN_URL, data=self.creds)
         if r.status_code == requests.codes.ok:
             soup = BeautifulSoup(r.content, "lxml")
@@ -116,8 +121,8 @@ class ClimoteService:
             return True
         return False
 
-    def setZoneBoostTime(self, zone, duration):
-        self.zones_boost_duration[zone] = duration
+    def setZoneBoostTime(self, zone, duration: str):
+        self.zones_boost_duration[zone] = float(duration)
 
     def __login(self):
         r = self.s.post(_LOGIN_URL, data=self.creds)
@@ -145,7 +150,7 @@ class ClimoteService:
 
     def boost(self, zoneid):
         _LOGGER.info("Boosting Zone %s", zoneid)
-        time = self.zones_boost_duration.get(zoneid, self.default_boost_duration)
+        time = self.zones_boost_duration.get(zoneid, float(self.default_boost_duration))
         self.set_hvac_mode_on(zoneid)
         return self.__boost(zoneid, time)
 
@@ -207,6 +212,9 @@ class ClimoteService:
             self.s.headers = tmp
         return res
 
+    def __process_data(self):
+        _LOGGER.info(f"Data back from API is {self.data}")
+
     def __updateStatus(self, force):
         def is_done(r):
             return r.text != "0"
@@ -233,7 +241,7 @@ class ClimoteService:
                 res = False
             else:
                 self.data = json.loads(r.text)
-                _LOGGER.info(f"Data back from API is {self.data}")
+                self.__process_data()
                 res = True
         except polling.TimeoutException:
             _LOGGER.info("Data failed coming back from API. Timeout.")
@@ -311,14 +319,14 @@ class ClimoteService:
             return False
 
         if self.last_update_complete:
-            seconds_since_update = (
+            self.seconds_since_update = (
                 self.last_update_attempt - self.last_update_complete
             ).total_seconds()
-            if seconds_since_update < self.refresh_interval:
+            if self.seconds_since_update < self.refresh_interval:
                 # Last update was within interval
                 _LOGGER.info(
                     "%ds is still within interval %s. Not getting new data"
-                    % (seconds_since_update, self.refresh_interval)
+                    % (self.seconds_since_update, self.refresh_interval)
                 )
                 return False
 

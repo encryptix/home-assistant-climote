@@ -3,6 +3,9 @@ import requests
 import json
 import datetime
 
+DEFAULT_BOOST_DURATION = "0.5"
+DEFAULT_REFRESH_INTERVAL = 12
+
 # This would eventually be a python package, nothing HA specific in it
 class ClimoteService:
     _climote_service_instances = {}
@@ -24,6 +27,7 @@ class ClimoteService:
         instance.logged_in = False
         instance.update_in_progress = False
         instance.last_update_complete = None
+        instance.seconds_since_update = None
 
     @staticmethod
     def get_instance(
@@ -31,8 +35,8 @@ class ClimoteService:
         username,
         password,
         logger,
-        refresh_interval: 12,
-        default_boost_duration: 1,
+        refresh_interval: DEFAULT_REFRESH_INTERVAL,
+        default_boost_duration: DEFAULT_BOOST_DURATION,
     ):
         if not ClimoteService._climote_service_instances.get(passcode, None):
             ClimoteService._climote_service_instances[passcode] = ClimoteService(
@@ -56,8 +60,8 @@ class ClimoteService:
         username,
         password,
         logger,
-        refresh_interval: 12,
-        default_boost_duration: 1,
+        refresh_interval: DEFAULT_REFRESH_INTERVAL,
+        default_boost_duration: DEFAULT_BOOST_DURATION,
     ):
         self.s = requests.Session()
         self.s.headers.update(
@@ -79,6 +83,8 @@ class ClimoteService:
 
         self.update_in_progress = False
         self.last_update_complete = None
+        self.last_update_attempt = None
+        self.seconds_since_update = None
 
     def hours_to_seconds(self, hours):
         return hours * 60 * 60
@@ -107,8 +113,8 @@ class ClimoteService:
         # return False
         # raise TimeoutException("Test exception")
 
-    def setZoneBoostTime(self, zone, duration):
-        self.zones_boost_duration[zone] = duration
+    def setZoneBoostTime(self, zone, duration: str):
+        self.zones_boost_duration[zone] = float(duration)
 
     def __login(self):
         return True
@@ -171,8 +177,7 @@ class ClimoteService:
         return
 
     def __setZones(self):
-        default_zone = {"temperature": 1, "status": "5", "thermostat": 0, "active": 1}
-        self.zones = {1: "up", 2: "down", 3: "left"}
+        self.zones = {1: "Living", 2: "Bed", 3: "Water"}
         return
 
     def set_target_temperature(self, zone, temp):
@@ -213,14 +218,14 @@ class ClimoteService:
             return False
 
         if self.last_update_complete:
-            seconds_since_update = (
+            self.seconds_since_update = (
                 self.last_update_attempt - self.last_update_complete
             ).total_seconds()
-            if seconds_since_update < self.refresh_interval:
+            if self.seconds_since_update < self.refresh_interval:
                 # Last update was within interval
                 _LOGGER.info(
                     "%ds is still within interval %s. Not getting new data"
-                    % (seconds_since_update, self.refresh_interval)
+                    % (self.seconds_since_update, self.refresh_interval)
                 )
                 return False
 
@@ -244,6 +249,15 @@ _DEFAULT_JSON = (
     '"zone3": { "burner": 0, "status": null, "temperature": "0", '
     '"thermostat": 0 } }'
 )
+
+# Updated
+_LOGGED_IN_JSON_NEW = {
+    '{"holiday": "00", "hold": None, "updated_at": "15:15", "unit_time": "15:15", '
+    '"zone1": {"burner": 1, "timeRemaining": None, "status": None, "temperature": "17", "thermostat": 0}, '
+    '"zone2": {"burner": 1, "timeRemaining": None, "status": None, "temperature": "0", "thermostat": 0}, '
+    '"zone3": {"burner": 0, "timeRemaining": None, "status": None, "temperature": False, "thermostat": 0}}'
+}
+
 _LOGIN_URL = "https://climote.climote.ie/manager/login"
 _LOGOUT_URL = "https://climote.climote.ie/manager/logout"
 _SCHEDULE_ELEMENT = "/manager/edit-heating-schedule?heatingScheduleId"

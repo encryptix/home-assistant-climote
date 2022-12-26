@@ -20,19 +20,20 @@ from .const import (
     PASSWORD,
     REFRESH_INTERVAL,
     USERNAME,
+    VALID_BOOST_VALUES,
+    TEST_MODE,
 )
 
 _LOGGER = logging.getLogger(__name__)
-# Temporary testing toggle
-TEST = False
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CLIMOTE_ID): str,
         vol.Required(USERNAME): str,
         vol.Required(PASSWORD): str,
-        vol.Required(BOOST_DURATION, default=0.5): float,
+        vol.Required(BOOST_DURATION, default="0.5"): str,
         vol.Required(REFRESH_INTERVAL, default=24): int,
+        vol.Required(TEST_MODE, default=False): bool,
     }
 )
 
@@ -42,10 +43,15 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    if TEST:
-        climote = ClimoteServiceStub
-    else:
+    boost = str(float(data[BOOST_DURATION]))
+    if boost not in VALID_BOOST_VALUES:
+        raise InvalidDefaultBoost(f"{boost} is an invalid duration")
+    data[BOOST_DURATION] = boost
+
+    if data[TEST_MODE] is False:
         climote = ClimoteService
+    else:
+        climote = ClimoteServiceStub
 
     temp_climote_object = climote(
         data[CLIMOTE_ID], data[USERNAME], data[PASSWORD], _LOGGER, 12, 1
@@ -92,6 +98,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "cannot_connect"
         except InvalidAuth:
             errors["base"] = "invalid_auth"
+        except InvalidDefaultBoost:
+            errors["base"] = "invalid_boost"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
@@ -167,6 +175,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     REFRESH_INTERVAL,
                     default=self.config_entry.data.get(REFRESH_INTERVAL),
                 ): int,
+                vol.Required(
+                    TEST_MODE,
+                    default=self.config_entry.data.get(TEST_MODE),
+                ): bool,
             }
         )
 
@@ -179,3 +191,7 @@ class CannotConnect(HomeAssistantError):
 
 class InvalidAuth(HomeAssistantError):
     """Error to indicate there is invalid auth."""
+
+
+class InvalidDefaultBoost(HomeAssistantError):
+    """Error to indicate the user has chosen an invalid boost duration"""
