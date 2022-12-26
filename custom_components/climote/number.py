@@ -90,10 +90,7 @@ class BoostDuration(NumberEntity):
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
         return DeviceInfo(
-            identifiers={
-                (DOMAIN),
-                self._climote.device_id,
-            },
+            identifiers={(DOMAIN, self._climote.device_id)},
             name="Climote Hub",
             manufacturer="Climote",
             model="Remote Heating Controller",

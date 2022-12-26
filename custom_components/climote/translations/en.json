@@ -1,7 +1,8 @@
 {
   "config": {
     "abort": {
-      "already_configured": "Device is already configured"
+      "already_configured": "Device is already configured",
+      "reauth_sucessful": "Successfully connected"
     },
     "error": {
       "cannot_connect": "Failed to connect",
@@ -14,8 +15,16 @@
           "climote_id": "Climote #",
           "password": "Password",
           "username": "Username",
-          "interval": "Refresh Interval",
-          "boost": "Default Boost Duration"
+          "interval": "Data Refresh Interval",
+          "boost": "Initial Boost Duration"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauth Required",
+        "description": "The Climote integration needs to re-authenticate your account",
+        "data": {
+          "password": "Password",
+          "username": "Username"
         }
       }
     }
@@ -26,8 +35,7 @@
         "data": {
           "password": "Password",
           "username": "Username",
-          "interval": "Refresh Interval",
-          "boost": "Default Boost Duration"
+          "interval": "Data Refresh Interval"
         }
       }
     }

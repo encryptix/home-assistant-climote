@@ -1,17 +1,65 @@
-import requests
+import datetime
 import json
+
 from bs4 import BeautifulSoup
-import polling
-import xmljson
 from lxml import etree as ET
+import polling
+import requests
+import xmljson
+
 
 # This would eventually be a python package, nothing HA specific in it
 class ClimoteService:
-    def __init__(
-        self,
+    _climote_service_instances = {}
+
+    @staticmethod
+    def update_instance(
+        passcode,
         username,
         password,
+        refresh_interval,
+    ):
+        instance = ClimoteService._climote_service_instances.get(passcode, None)
+        instance.creds = {
+            "password": username,
+            "username": passcode,
+            "passcode": password,
+        }
+        instance.refresh_interval = instance.hours_to_seconds(refresh_interval)
+        instance.logged_in = False
+        instance.update_in_progress = False
+        instance.last_update_complete = None
+
+    @staticmethod
+    def get_instance(
         passcode,
+        username,
+        password,
+        logger,
+        refresh_interval: 12,
+        default_boost_duration: 1,
+    ):
+        if not ClimoteService._climote_service_instances.get(passcode, None):
+            ClimoteService._climote_service_instances[passcode] = ClimoteService(
+                passcode,
+                username,
+                password,
+                logger,
+                refresh_interval=refresh_interval,
+                default_boost_duration=default_boost_duration,
+            )
+
+        return ClimoteService._climote_service_instances[passcode]
+
+    class TimeoutException(RuntimeError):
+        def __init__(self, arg):
+            self.args = arg
+
+    def __init__(
+        self,
+        passcode,
+        username,
+        password,
         logger,
         refresh_interval: 12,
         default_boost_duration: 1,
@@ -31,8 +79,13 @@ class ClimoteService:
         _LOGGER = logger
 
         self.device_id = passcode
-        self.refresh_interval = refresh_interval
+        self.refresh_interval = self.hours_to_seconds(refresh_interval)
         self.default_boost_duration = default_boost_duration
+        self.update_in_progress = False
+        self.last_update_complete = None
+
+    def hours_to_seconds(self, hours):
+        return hours * 60 * 60
 
     @staticmethod
     def sanitized_device_id(device_id):
@@ -51,12 +104,22 @@ class ClimoteService:
         finally:
             self.__logout()
 
+    def test_authenticate(self):
+        # Very hacky...
+        # TODO raise TimeoutException("Test exception") if can't connect
+        r = self.s.post(_LOGIN_URL, data=self.creds)
+        if r.status_code == requests.codes.ok:
+            soup = BeautifulSoup(r.content, "lxml")
+            input = soup.find("input")  # First input has token "cs_token_rf"
+            if len(input["value"]) < 2:
+                return False
+            return True
+        return False
+
     def setZoneBoostTime(self, zone, duration):
         self.zones_boost_duration[zone] = duration
 
     def __login(self):
-        return True
-
         r = self.s.post(_LOGIN_URL, data=self.creds)
         if r.status_code == requests.codes.ok:
             soup = BeautifulSoup(r.content, "lxml")
@@ -75,26 +138,21 @@ class ClimoteService:
             return self.logged_in
 
     def __logout(self):
-        return True
         _LOGGER.info("Logging Out")
         r = self.s.get(_LOGOUT_URL)
         _LOGGER.debug("Logging Out Result: %s", r.status_code)
         return r.status_code == requests.codes.ok
 
-    def boost_new(self, zoneid):
+    def boost(self, zoneid):
         _LOGGER.info("Boosting Zone %s", zoneid)
         time = self.zones_boost_duration.get(zoneid, self.default_boost_duration)
-        self.set_hvac_mode_on(zoneid)
-        return self.__boost(zoneid, time)
-
-    def boost(self, zoneid, time):
-        _LOGGER.info("Boosting Zone %s", zoneid)
         self.set_hvac_mode_on(zoneid)
         return self.__boost(zoneid, time)
 
     def off(self, zoneid, time):
         _LOGGER.info("Turning Off Zone %s", zoneid)
         self.set_hvac_mode_off(zoneid)
+        # This should send 'stop' not a 0
         return self.__boost(zoneid, time)
 
     def set_hvac_mode_on(self, zoneid):
@@ -110,6 +168,7 @@ class ClimoteService:
         self.data[zone]["thermostat"] = temp
 
     def getStatus(self, force):
+        # TODO: what uses this method?
         try:
             self.__login()
             _LOGGER.info("Beginning Get Status")
@@ -125,10 +184,10 @@ class ClimoteService:
             self.__updateStatus(force=True)
             _LOGGER.info("Ended Update Status")
         finally:
+            self.update_in_progress = False
             self.__logout()
 
     def __getStatus(self, force):
-        return False
         res = None
         tmp = self.s.headers
         try:
@@ -149,8 +208,6 @@ class ClimoteService:
         return res
 
     def __updateStatus(self, force):
-        return False
-
         def is_done(r):
             return r.text != "0"
 
@@ -170,23 +227,22 @@ class ClimoteService:
                 step=10,
                 check_success=is_done,
                 poll_forever=False,
-                timeout=3,  # TODO 120
+                timeout=120,  # TODO make configurable
             )
             if r.text == "0":
                 res = False
             else:
                 self.data = json.loads(r.text)
+                _LOGGER.info(f"Data back from API is {self.data}")
                 res = True
         except polling.TimeoutException:
+            _LOGGER.info("Data failed coming back from API. Timeout.")
             res = False
         finally:
             self.s.headers = tmp
         return res
 
     def __setConfig(self):
-        # I added
-        self.config = {}
-        return
         if self.logged_in is False:
             raise IllegalStateException("Not logged in")
 
@@ -196,10 +252,6 @@ class ClimoteService:
         self.config = xmljson.parker.data(xml)
 
     def __setZones(self):
-        default_zone = {"temperature": 1, "status": "5", "thermostat": 0, "active": 1}
-        self.zones = {1: "up", 2: "down", 3: "left"}
-        return
-
         if self.config is None:
             return
 
@@ -233,7 +285,6 @@ class ClimoteService:
 
     def __boost(self, zoneid, time):
         """Turn on the heat for a given zone, for a given number of hours"""
-        return True
         res = False
         try:
             self.__login()
@@ -244,6 +295,38 @@ class ClimoteService:
         finally:
             self.__logout()
         return res
+
+    # Temporary method until I make a data coordinator and tidy up class
+    def attempt_timed_update(self):
+        # Last time this method was called
+        self.last_update_attempt = datetime.datetime.now()
+        # When to allow updates?
+        # Only allow updates every X hours, otherwise do nothing
+        # (Time of Attempt - Time Last Update) > X hours
+        # Also limit concurrently to one with update_in_progress bool
+        if self.update_in_progress:
+            # Already updating (Should be impossible given HA is singular by default)
+            _LOGGER.info("Climote update is already running")
+
+            return False
+
+        if self.last_update_complete:
+            seconds_since_update = (
+                self.last_update_attempt - self.last_update_complete
+            ).total_seconds()
+            if seconds_since_update < self.refresh_interval:
+                # Last update was within interval
+                _LOGGER.info(
+                    "%ds is still within interval %s. Not getting new data"
+                    % (seconds_since_update, self.refresh_interval)
+                )
+                return False
+
+        self.update_in_progress = True
+        self.updateStatus(True)
+        self.last_update_complete = datetime.datetime.now()
+
+        return True
 
 
 class IllegalStateException(RuntimeError):

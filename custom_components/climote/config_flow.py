@@ -10,18 +10,21 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
-from .climote_service import ClimoteService
 
+from .climote_service import ClimoteService
+from .climote_service_stub import ClimoteService as ClimoteServiceStub
 from .const import (
-    DOMAIN,
+    BOOST_DURATION,
     CLIMOTE_ID,
-    USERNAME,
+    DOMAIN,
     PASSWORD,
     REFRESH_INTERVAL,
-    BOOST_DURATION,
+    USERNAME,
 )
 
 _LOGGER = logging.getLogger(__name__)
+# Temporary testing toggle
+TEST = False
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -34,43 +37,29 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class PlaceholderHub:
-    """Placeholder class to make tests pass.
-
-    TODO Remove this placeholder class and replace with things from your PyPI package.
-    """
-
-    def __init__(self, host: str) -> None:
-        """Initialize."""
-        self.host = host
-
-    async def authenticate(self, username: str, password: str) -> bool:
-        """Test if we can authenticate with the host."""
-        return True
-
-
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    # TODO validate the data can be used to set up a connection.
+    if TEST:
+        climote = ClimoteServiceStub
+    else:
+        climote = ClimoteService
 
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
+    temp_climote_object = climote(
+        data[CLIMOTE_ID], data[USERNAME], data[PASSWORD], _LOGGER, 12, 1
+    )
 
-    hub = PlaceholderHub(data[CLIMOTE_ID])
+    try:
+        auth_successful = await hass.async_add_executor_job(
+            temp_climote_object.test_authenticate
+        )
+    except climote.TimeoutException as exc:
+        raise CannotConnect from exc
 
-    if not await hub.authenticate(data[USERNAME], data[PASSWORD]):
+    if not auth_successful:
         raise InvalidAuth
-
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
 
     # Return info that you want to store in the config entry.
     return {"title": ClimoteService.sanitized_device_id(data[CLIMOTE_ID])}
@@ -121,6 +110,30 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Create the options flow."""
         return OptionsFlowHandler(config_entry)
 
+    # https://developers.home-assistant.io/docs/config_entries_config_flow_handler/#reauthentication
+    async def async_step_reauth(self, user_input=None):
+        """Perform reauth upon an API authentication error."""
+        self.reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Dialog that informs the user that reauth is required."""
+        reauth_schema = vol.Schema(
+            {
+                vol.Required(USERNAME, default=self.init_data.get(USERNAME)): str,
+                vol.Required(PASSWORD, default=self.init_data.get(PASSWORD)): str,
+            }
+        )
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                data_schema=reauth_schema,
+            )
+        return await self.async_step_user(user_input)
+
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
@@ -132,6 +145,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     ) -> FlowResult:
         """Manage the options."""
         if user_input is not None:
+            # Copy the data that wasn't up for modification
+            user_input[CLIMOTE_ID] = self.config_entry.data[CLIMOTE_ID]
+            user_input[BOOST_DURATION] = self.config_entry.data[BOOST_DURATION]
+
             # This line taken from https://github.com/PeteRager/lennoxs30/blob/master/custom_components/lennoxs30/config_flow.py#L303 due to https://community.home-assistant.io/t/configflowhandler-and-optionsflowhandler-managing-the-same-parameter/365582/5
             self.hass.config_entries.async_update_entry(
                 self.config_entry, data=user_input, options=self.config_entry.options
@@ -147,17 +164,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
                     PASSWORD, default=self.config_entry.data.get(PASSWORD)
                 ): str,
                 vol.Required(
-                    BOOST_DURATION,
-                    default=self.config_entry.data.get(BOOST_DURATION),
-                ): float,
-                vol.Required(
                     REFRESH_INTERVAL,
                     default=self.config_entry.data.get(REFRESH_INTERVAL),
                 ): int,
             }
         )
-
-        # TODO , Signal Updates https://developers.home-assistant.io/docs/config_entries_options_flow_handler/#signal-updates
 
         return self.async_show_form(step_id="init", data_schema=update_data_schema)
 

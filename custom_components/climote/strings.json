@@ -3,10 +3,18 @@
     "step": {
       "user": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
+          "climote_id": "[%key:common::config_flow::data::climote_id%]",
           "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "password": "[%key:common::config_flow::data::password%]",
+          "interval": "[%key:common::config_flow::data::interval%]",
+          "boost": "[%key:common::config_flow::data::boost%]"
         }
+      },
+      "reauth_confirm": {
+        "title": "[%key:common::config_flow::title::reauth%]",
+        "description": "[%key:common::config_flow::data::description%]",
+        "username": "[%key:common::config_flow::data::username%]",
+        "password": "[%key:common::config_flow::data::password%]"
       }
     },
     "error": {
@@ -15,14 +23,15 @@
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
     }
   },
   "options": {
     "step": {
       "init": {
         "data": {
-          "host": "[%key:common::config_flow::data::host%]",
+          "interval": "[%key:common::config_flow::data::interval%]",
           "username": "[%key:common::config_flow::data::username%]",
           "password": "[%key:common::config_flow::data::password%]"
         }

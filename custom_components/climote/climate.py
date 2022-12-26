@@ -1,41 +1,33 @@
-import logging
-from .const import DOMAIN
-from homeassistant.helpers.entity import DeviceInfo
 from datetime import timedelta
-from homeassistant.util import Throttle
+import logging
 
-# If climate needs this, number probably does too
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import (
-    SUPPORT_TARGET_TEMPERATURE,
-    HVAC_MODE_OFF,
-    HVAC_MODE_HEAT,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_IDLE,
-)
-from homeassistant.const import (
-    ATTR_TEMPERATURE,
-    TEMP_CELSIUS,
-)
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .const import DOMAIN
+
+# TODO switch to data coordinator
+# from homeassistant.util import Throttle
+
 
 _LOGGER = logging.getLogger(__name__)
 
-# TODO look into what all of this is for
+# this can be passed in when using a data coordinator
+# TODO set back to 5 for now
 MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=5)
 SCAN_INTERVAL = MIN_TIME_BETWEEN_UPDATES
-#: Interval in hours that module will try to refresh data from the climote.
-CONF_REFRESH_INTERVAL = "refresh_interval"
+
 NOCHANGE = "nochange"
 ICON = "mdi:thermometer"
-
-MAX_TEMP = 75
-MIN_TEMP = 0
-
-SUPPORT_FLAGS = SUPPORT_TARGET_TEMPERATURE
-SUPPORT_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF]
 
 
 async def async_setup_entry(
@@ -51,11 +43,7 @@ async def async_setup_entry(
 
     climotesvc = hass.data[DOMAIN][entry.entry_id]
 
-    # interval = int(config.get(CONF_REFRESH_INTERVAL))
-
-    # Add devices (these arent really devices.... are they? is a zone a device?)
     entities = []
-
     if not climotesvc.zones:
         # TODO proper error handling
         raise Exception("There should have been zones by now")
@@ -65,12 +53,19 @@ async def async_setup_entry(
     _LOGGER.info("3. Found entities %s", entities)
 
     add_entities(entities)
-    # async_add_entities??
     return True
 
 
+# flexit and adax climate.py are good examples
 class ClimoteEntity(ClimateEntity):
     """Representation of a Climote device."""
+
+    _attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
+    _attr_max_temp = 30
+    _attr_min_temp = 10
+    _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
+    _attr_target_temperature_step = PRECISION_WHOLE
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
 
     def __init__(self, climote_service, zone_id, name):
         """Initialize the thermostat."""
@@ -82,9 +77,9 @@ class ClimoteEntity(ClimateEntity):
         self._zoneid = zone_id
         self._name = f"climote_{self._climote.get_sanitized_device_id()}_{name}"
         self._force_update = False
-        self.throttled_update = Throttle(
-            timedelta(minutes=self._climote.refresh_interval)
-        )(self._throttled_update)
+        # self.throttled_update = Throttle(
+        #     timedelta(minutes=self._climote.refresh_interval)
+        # )(self._throttled_update)
         self._unique_id = f"climote_climate_{self._climote.device_id}_{self._zoneid}"
 
     @property
@@ -92,23 +87,13 @@ class ClimoteEntity(ClimateEntity):
         return True
 
     @property
-    def supported_features(self):
-        """Return the list of supported features."""
-        return SUPPORT_FLAGS
-
-    @property
     def hvac_mode(self):
         """Return current operation. ie. heat, cool, off."""
         zone = "zone" + str(self._zoneid)
         _LOGGER.debug(self._climote.data)
-        return "heat" if self._climote.data[zone]["status"] == "5" else "off"
-
-    @property
-    def hvac_modes(self):
-        """Return the list of available hvac operation modes.
-        Need to be a subset of HVAC_MODES.
-        """
-        return SUPPORT_MODES
+        return (
+            HVACMode.HEAT if self._climote.data[zone]["status"] == "5" else HVACMode.OFF
+        )
 
     @property
     def name(self):
@@ -124,11 +109,6 @@ class ClimoteEntity(ClimateEntity):
     def icon(self):
         """Return the icon to use in the frontend."""
         return ICON
-
-    @property
-    def temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
 
     @property
     def target_temperature_step(self):
@@ -150,16 +130,6 @@ class ClimoteEntity(ClimateEntity):
         )
 
     @property
-    def min_temp(self):
-        """Return the minimum temperature."""
-        return MIN_TEMP
-
-    @property
-    def max_temp(self):
-        """Return the maximum temperature."""
-        return MAX_TEMP
-
-    @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
         zone = "zone" + str(self._zoneid)
@@ -171,20 +141,19 @@ class ClimoteEntity(ClimateEntity):
         """Return current operation."""
         zone = "zone" + str(self._zoneid)
         return (
-            CURRENT_HVAC_HEAT
+            HVACAction.HEATING
             if self._climote.data[zone]["status"] == "5"
-            else CURRENT_HVAC_IDLE
+            else HVACAction.IDLE
         )
 
     def set_hvac_mode(self, hvac_mode):
-        if hvac_mode == HVAC_MODE_HEAT:
+        if hvac_mode == HVACMode.HEAT:
             """Turn Heating Boost On."""
-            res = self._climote.boost_new(self._zoneid)
-            # res = self._climote.boost(self._zoneid, 1)
+            res = self._climote.boost(self._zoneid)
             if res:
                 self._force_update = True
             return res
-        if hvac_mode == HVAC_MODE_OFF:
+        if hvac_mode == HVACAction.OFF:
             """Turn Heating Boost Off."""
             res = self._climote.off(self._zoneid, 0)
             if res:
@@ -201,23 +170,34 @@ class ClimoteEntity(ClimateEntity):
             self._force_update = True
         return res
 
+    # TODO do I need to switch to this when using coordinator?
+    # def async_update(self):
+    #     _LOGGER.info(f"ASYNC UPDATE called for {self.unique_id}")
+    #     a = 1
+
     def update(self):
-        self._climote.updateStatus(self._force_update)
+        _LOGGER.info(f"UPDATE called for {self.unique_id}")
+        # a = 1
+        self._climote.attempt_timed_update()
 
     # TODO look into what this is and how update above works
-    async def _throttled_update(self, **kwargs):
-        """Get the latest state from the thermostat with a throttle."""
-        _LOGGER.info("_throttled_update Force: %s", self._force_update)
-        self._climote.updateStatus(self._force_update)
+    # Upon init, this method is wrapped inside a THrottle
+    # Throttle has a time which prevents this being called again during it
+    # That way this methof is only going to run once PER entity for the interval
+    #
+    # What I dont understand is how def update() wasn't forcing a lot of API calls
+    # because by default, when polling, its ccalled once per minute
+    # Putting the logic of has it been X minutes here simplifies the python class
+    # async def _throttled_update(self, **kwargs):
+    #     """Get the latest state from the thermostat with a throttle."""
+    #     _LOGGER.info("_throttled_update Force: %s", self._force_update)
+    #     self._climote.updateStatus(self._force_update)
 
     @property
     def device_info(self) -> DeviceInfo:
         """Return the device info."""
         return DeviceInfo(
-            identifiers={
-                (DOMAIN),
-                self._climote.device_id,
-            },
+            identifiers={(DOMAIN, self._climote.device_id)},
             name="Climote Hub",
             manufacturer="Climote",
             model="Remote Heating Controller",

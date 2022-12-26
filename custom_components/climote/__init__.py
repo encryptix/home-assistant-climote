@@ -1,25 +1,71 @@
 """The Climate Climote integration."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-
-from .const import (
-    DOMAIN,
-    USERNAME,
-    PASSWORD,
-    CLIMOTE_ID,
-    REFRESH_INTERVAL,
-    BOOST_DURATION,
-)
+from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
 from .climote_service import ClimoteService
-
-PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER]
-import logging
+from .climote_service_stub import ClimoteService as ClimoteServiceStub
+from .const import (
+    BOOST_DURATION,
+    CLIMOTE_ID,
+    DOMAIN,
+    PASSWORD,
+    REFRESH_INTERVAL,
+    USERNAME,
+)
 
 _LOGGER = logging.getLogger(__name__)
+PLATFORMS: list[Platform] = [Platform.CLIMATE, Platform.NUMBER]
+# Temporary testing toggle
+TEST = False
+
+# Signal Updates https://developers.home-assistant.io/docs/config_entries_options_flow_handler/#signal-updates
+async def update_listener(hass, entry):
+    """Handle options update."""
+
+    climoteid = entry.data[CLIMOTE_ID]
+
+    username = entry.data[USERNAME]
+    password = entry.data[PASSWORD]
+    refresh_interval = entry.data[REFRESH_INTERVAL]
+
+    if TEST:
+        climote = ClimoteServiceStub
+    else:
+        climote = ClimoteService
+
+    climote.update_instance(climoteid, username, password, refresh_interval)
+
+
+def get_climote_instance(entry):
+    climoteid = entry.data[CLIMOTE_ID]
+
+    username = entry.data[USERNAME]
+    password = entry.data[PASSWORD]
+    refresh_interval = entry.data[REFRESH_INTERVAL]
+    default_boost_duration = entry.data[BOOST_DURATION]
+
+    if TEST:
+        climote = ClimoteServiceStub
+    else:
+        climote = ClimoteService
+
+    climote_svc = climote.get_instance(
+        climoteid,
+        username,
+        password,
+        _LOGGER,
+        refresh_interval=refresh_interval,
+        default_boost_duration=default_boost_duration,
+    )
+
+    return climote_svc
+
 
 # This seems to replace async_setup (which was used for configuration.yaml based settings)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -28,38 +74,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _LOGGER.info(f"async_setup_entry UniqueID [{entry.unique_id}] Data [{entry.data}]")
 
-    # TODO: Why did I end up back in here when I updated the configuration (when the entry previously didnt exist), I then didnt have a climote # as its not in my options flow.
-    # NOW its happening when I refresh the page?
-    # 1. Create API instance
-    username = entry.data[USERNAME]
-    password = entry.data[PASSWORD]
-    climoteid = entry.data[CLIMOTE_ID]
-    refresh_interval = entry.data[REFRESH_INTERVAL]
-    default_boost_duration = entry.data[BOOST_DURATION]
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    climote_svc = ClimoteService(
-        username,
-        password,
-        climoteid,
-        _LOGGER,
-        refresh_interval=refresh_interval,
-        default_boost_duration=default_boost_duration,
-    )
+    # 1. Create API instance
+    climote_svc = get_climote_instance(entry)
 
     # 2. Validate the API connection (and authentication)
-    # This now does the first HTTP request
-    # if not (climote_svc.initialize()):
-    #    return False
+    try:
+        init_successful = await hass.async_add_executor_job(climote_svc.initialize)
+    except climote_svc.TimeoutException as ex:
+        raise ConfigEntryNotReady(ex) from ex
 
-    init_successful = await hass.async_add_executor_job(climote_svc.initialize)
     if not init_successful:
-        a = 1
-        return False
-        # TODO should this raise? or return can read to find out
-        # raise ConfigEntryNotReady
+        raise ConfigEntryAuthFailed("Credentials were not accepted")
 
     # 3. Store an API object for your platforms to access
-    # TODO consider using a coordinator rather than class directly
+    # TODO consider using a coordinator rather than class and singleton directly
     hass.data[DOMAIN][entry.entry_id] = climote_svc
 
     # 4. Delegate setup to platforms
